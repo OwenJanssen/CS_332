@@ -2,11 +2,11 @@ import pandas as pd
 import random 
 import numpy as np
 
-df = pd.read_csv('bid_data.csv')
+df = pd.read_csv('Project 1/bid_data.csv')
 our_bids = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-optimal_bids = [6, 12, 12, 21, 22, 31, 32, 41, 41, 52]
 
-def exact_winning_prob_utility(our_bid, value):
+## Functions for evaluating bids using all/exact data
+def exact_win_prob_utility(our_bid, value):
     # calculate winning prob 
     wins = 0
     for col_header in df.head():
@@ -19,45 +19,50 @@ def exact_winning_prob_utility(our_bid, value):
                 if random.random() > 0.5:
                     wins += 1
 
-    winning_prob = wins/df.size
+    win_prob = wins/df.size
 
     # calculate utility
-    utility = value - our_bid
-    print(value)
-    print(our_bid)
-    print(utility)
+    expected_utility = (value - our_bid) * win_prob
 
-    return winning_prob, utility
+    return win_prob, expected_utility
 
 def evaluate_our_bids_exact():
-    bid_results = [0 for i in range(len(optimal_bids))]
-    for i in range(len(optimal_bids)):
-        bid_results[i] = exact_winning_prob_utility(optimal_bids[i], (i+1)*10)
-    print("Exact our bid results")
-    print(bid_results)
+    bid_results = [0 for i in range(len(our_bids))]
+    for i in range(len(our_bids)):
+        win_prob, expected_utility = exact_win_prob_utility(our_bids[i], (i+1)*10)
+        bid_results[i] = [our_bids[i], expected_utility, win_prob]
 
-def exact_optimal_bid(value):
+    # print("Exact our bid results")
+    # print(bid_results)
+    return bid_results
+
+def optimal_bid_exact(value):
     # optimal bid calculation
     # run for int 1 to value and find expected utility then return the greatest
-    expected_values = [0 for i in range(value)]
+    expected_utilities = [0 for i in range(value)]
+    win_probs = [0 for i in range(value)]
     
     for i in range(value):
-        prob_and_utility = exact_winning_prob_utility(i, value)
-        expected_values[i] = prob_and_utility[0] * prob_and_utility[1]
+        win_prob, expected_utility = exact_win_prob_utility(i, value)
+        win_probs[i] = win_prob
+        expected_utilities[i] = expected_utility
 
-    best_value = np.argmax(expected_values)
-    return best_value, expected_values[best_value]
+    optimal_bid = np.argmax(expected_utilities)
+    return optimal_bid, expected_utilities[optimal_bid], win_probs[optimal_bid]
 
 def evaluate_optimal_bids_exact():
     values = [10*(i+1) for i in range(10)]
     value_results = [0 for i in range(10)]
     for i in range(len(values)):
-        value_results[i] = (exact_optimal_bid(values[i]))
+        value_results[i] = optimal_bid_exact(values[i])
 
-    print("Exact optimal bid result")
-    print(value_results)
+    # print("Exact optimal bid result")
+    # print(value_results)
+    return value_results
 
-def monte_carlo_winning_prob_utility(our_bid, value):
+
+## Functions for evaluating bids using all/exact data
+def monte_carlo_win_prob_utility(our_bid, value):
     # from the value col in excel draw a random bid 
     
     alpha = 0.05
@@ -78,41 +83,70 @@ def monte_carlo_winning_prob_utility(our_bid, value):
             if random.random() > 0.5:
                 wins += 1
 
-    winning_prob = wins/n
+    win_prob = wins/n
         
     # calculate utility
-    utility = value-our_bid
+    expected_utility = (value - our_bid) * win_prob
 
-    return winning_prob, utility
+    return win_prob, expected_utility
    
 def evaluate_our_bids_monte_carlo():
     bid_results = [0 for i in range(len(our_bids))]
     for i in range(len(our_bids)):
-        bid_results[i] = monte_carlo_winning_prob_utility(our_bids[i], (i+1)*10)
-    print("MC our bid results")
-    print(bid_results)
-    
+        win_prob, expected_utility = monte_carlo_win_prob_utility(our_bids[i], (i+1)*10)
+        bid_results[i] = [our_bids[i], expected_utility, win_prob]
+
+    # print("MC our bid results")
+    # print(bid_results)
+    return bid_results
+
 def optimal_bid_monte_carlo(value):
-    expected_values = [0 for i in range(value)]
+    expected_utilities = [0 for i in range(value)]
+    win_probs = [0 for i in range(value)]
     
     for i in range(value):
-        prob_and_utility = monte_carlo_winning_prob_utility(i, value)
-        expected_values[i] = prob_and_utility[0] * prob_and_utility[1]
+        win_prob, expected_utility = monte_carlo_win_prob_utility(i, value)
+        win_probs[i] = win_prob
+        expected_utilities[i] = expected_utility
 
-    best_value = np.argmax(expected_values)
-    return best_value, expected_values[best_value]
+    optimal_bid = np.argmax(expected_utilities)
+    return optimal_bid, expected_utilities[optimal_bid], win_probs[optimal_bid]
 
 def evaluate_optimal_bids_monte_carlo():
     values = [10*(i+1) for i in range(10)]
     value_results = [0 for i in range(10)]
     for i in range(len(values)):
-        value_results[i] = (optimal_bid_monte_carlo(values[i]))
+        value_results[i] = optimal_bid_monte_carlo(values[i])
 
-    print("MC optimal bid results")
-    print(value_results)
+    # print("MC optimal bid results")
+    # print(value_results)
+    return value_results
     
+    
+our_exact = evaluate_our_bids_exact()
+opt_exact = evaluate_optimal_bids_exact()
+our_mc = evaluate_our_bids_monte_carlo()
+opt_mc = evaluate_optimal_bids_monte_carlo()
 
-evaluate_our_bids_exact()
-#evaluate_optimal_bids_exact()
-#evaluate_our_bids_monte_carlo()
-#evaluate_optimal_bids_monte_carlo()
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+output = {'value': [10*(i+1) for i in range(10)], 
+        'Our Bids Exact: Bid': column(our_exact, 0),
+        'Our Bids Exact: EU': column(our_exact, 1),
+        'Our Bids Exact: WP': column(our_exact, 2),
+        '': ['' for i in range(10)],
+        'Optimal Bids Exact: Bid': column(opt_exact, 0),
+        'Optimal Bids Exact: EU': column(opt_exact, 1),
+        'Optimal Bids Exact: WP': column(opt_exact, 2),
+        ' ': ['' for i in range(10)],
+        'Our Bids MC: Bid': column(our_mc, 0),
+        'Our Bids MC: EU': column(our_mc, 1),
+        'Our Bids MC: WP': column(our_mc, 2),
+        '  ': ['' for i in range(10)],
+        'Optimal Bids MC: Bid': column(opt_mc, 0),
+        'Optimal Bids MC: EU': column(opt_mc, 1),
+        'Optimal Bids MC: WP': column(opt_mc, 2)}
+
+output_df = pd.DataFrame(output)
+output_df.to_excel('Project 1/bid_data_results_new.xlsx', index=False)
