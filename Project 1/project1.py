@@ -149,4 +149,4 @@ output = {'value': [10*(i+1) for i in range(10)],
         'Optimal Bids MC: WP': column(opt_mc, 2)}
 
 output_df = pd.DataFrame(output)
-output_df.to_excel('Project 1/bid_data_results_new.xlsx', index=False)
+output_df.to_csv('Project 1/bid_data_results_new.csv', index=False)
