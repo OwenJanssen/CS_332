@@ -1,71 +1,114 @@
 import pandas as pd
 import random 
+import numpy as np
 
 df = pd.read_csv('bid_data.csv')
+our_bids = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
-def exact_winning_prob(bid, value):
+def exact_winning_prob_utility(our_bid, value):
+    # calculate winning prob 
+    wins = 0
+    for col_header in df.head():
+        value_col = df[col_header]
+        for opponent_bid in value_col:
+            if our_bid > float(opponent_bid):
+                wins += 1
+            elif our_bid == float(opponent_bid):
+                # flip a coin
+                if random.random() > 0.5:
+                    wins += 1
 
-    # calculate winning prob
-
-    bid_str = str(bid)
-    bid_str = bid_str[:-1]
-    bid_val = int(bid_str)
-
-    winning_prob = bid_val / 10
+    winning_prob = wins/df.size
 
     # calculate utility
+    utility = value - our_bid
 
-    payment = []
-    for i in range(10, 100, 10):
-        if bid >= i:
-            payment.append(i)
+    return winning_prob, utility
+
+def evaluate_our_bids_exact():
+    bid_results = [0 for i in range(len(our_bids))]
+    for i in range(len(our_bids)):
+        bid_results[i] = exact_winning_prob_utility(our_bids[i], (i+1)*10)
+    print("Exact our bid results")
+    print(bid_results)
+
+def exact_optimal_bid(value):
+    # optimal bid calculation
+    # run for int 1 to value and find expected utility then return the greatest
+    expected_values = [0 for i in range(value)]
     
-    for i in range(len(payment)):
-        payment[i] = value - payment[i]
-        
-    expected_utility = sum(payment) / 10
+    for i in range(value):
+        prob_and_utility = exact_winning_prob_utility(i, value)
+        expected_values[i] = prob_and_utility[0] * prob_and_utility[1]
 
-    return winning_prob, expected_utility
+    best_value = np.argmax(expected_values)
+    return best_value, expected_values[best_value]
 
-def monte_carlo(value):
+def evaluate_optimal_bids_exact():
+    values = [10*(i+1) for i in range(10)]
+    value_results = [0 for i in range(10)]
+    for i in range(len(values)):
+        value_results[i] = (exact_optimal_bid(values[i]))
 
+    print("Exact optimal bid result")
+    print(value_results)
+
+def monte_carlo_winning_prob_utility(our_bid, value):
     # from the value col in excel draw a random bid 
-    value_col = df['What is your bid when your value is' + value + '?']
-    value_lst = value_col.tolist()
-    n = 0 # weird calculation figure this out
+    
+    alpha = 0.05
+    epsilon = 0.15
+    n = int((np.log(2 / alpha)) / (2 * (pow(epsilon, 2))))
 
-    winning_prob_lst = []
-    expected_utility_lst = []
+    # winning prob calc
+    wins = 0
+    df_as_matrix = df.to_numpy()
+    df_flat = df_as_matrix.flatten()
 
     for i in range(n):
-        bid = random.choice(value_lst)
+        opponent_bid = np.random.choice(df_flat) 
+        if our_bid > float(opponent_bid):
+            wins += 1
+        elif our_bid == float(opponent_bid):
+            # flip a coin
+            if random.random() > 0.5:
+                wins += 1
 
-        # winning prob calc
-        bid_str = str(bid)
-        bid_str = bid_str[:-1]
-        bid_val = int(bid_str)
+    winning_prob = wins/n
+        
+    # calculate utility
+    utility = value-our_bid
 
-        winning_prob = bid_val / 10
-        winning_prob_lst.append(winning_prob)
-
-        # utility calc
-        payment = []
-        for i in range(10, 100, 10):
-            if bid >= i:
-                payment.append(i)
+    return winning_prob, utility
+   
+def evaluate_our_bids_monte_carlo():
+    bid_results = [0 for i in range(len(our_bids))]
+    for i in range(len(our_bids)):
+        bid_results[i] = monte_carlo_winning_prob_utility(our_bids[i], (i+1)*10)
+    print("MC our bid results")
+    print(bid_results)
     
-        for i in range(len(payment)):
-            payment[i] = value - payment[i]
-            
-
-        expected_utility = sum(payment) / 10
-        expected_utility_lst.append(expected_utility)
-
-    average_winning_prob = sum(winning_prob_lst) / len(winning_prob_lst)
-    average_expected_utility = sum(expected_utility_lst) / len(expected_utility_lst)
+def optimal_bid_monte_carlo(value):
+    expected_values = [0 for i in range(value)]
     
-    # run the same winning prob/utility and add to lists
+    for i in range(value):
+        prob_and_utility = monte_carlo_winning_prob_utility(i, value)
+        expected_values[i] = prob_and_utility[0] * prob_and_utility[1]
 
-    # run this a bunch of times
-    # average the results together
-    return average_winning_prob, average_expected_utility
+    best_value = np.argmax(expected_values)
+    return best_value, expected_values[best_value]
+
+def evaluate_optimal_bids_monte_carlo():
+    values = [10*(i+1) for i in range(10)]
+    value_results = [0 for i in range(10)]
+    for i in range(len(values)):
+        value_results[i] = (optimal_bid_monte_carlo(values[i]))
+
+    print("MC optimal bid results")
+    print(value_results)
+    
+
+evaluate_our_bids_exact()
+evaluate_optimal_bids_exact()
+evaluate_our_bids_monte_carlo()
+evaluate_optimal_bids_monte_carlo()
