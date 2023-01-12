@@ -6,6 +6,7 @@ df = pd.read_csv('bid_data.csv')
 our_bids = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 optimal_bids = [6, 12, 12, 21, 22, 31, 32, 41, 41, 52]
 
+
 def exact_winning_prob_utility(our_bid, value):
     # calculate winning prob 
     wins = 0
