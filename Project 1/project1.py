@@ -58,6 +58,7 @@ def evaluate_optimal_bids_exact():
     print("Exact optimal bid result")
     print(value_results)
 
+optimal_bid_mc = [4, 11, 16, 14, 21, 31, 34, 35, 43, 44]
 def monte_carlo_winning_prob_utility(our_bid, value):
     # from the value col in excel draw a random bid 
     
@@ -87,9 +88,9 @@ def monte_carlo_winning_prob_utility(our_bid, value):
     return winning_prob, utility
    
 def evaluate_our_bids_monte_carlo():
-    bid_results = [0 for i in range(len(our_bids))]
-    for i in range(len(our_bids)):
-        bid_results[i] = monte_carlo_winning_prob_utility(our_bids[i], (i+1)*10)
+    bid_results = [0 for i in range(len(optimal_bid_mc))]
+    for i in range(len(optimal_bid_mc)):
+        bid_results[i] = monte_carlo_winning_prob_utility(optimal_bid_mc[i], (i+1)*10)
     print("MC our bid results")
     print(bid_results)
     
@@ -113,7 +114,7 @@ def evaluate_optimal_bids_monte_carlo():
     print(value_results)
     
 
-evaluate_our_bids_exact()
+#evaluate_our_bids_exact()
 #evaluate_optimal_bids_exact()
-#evaluate_our_bids_monte_carlo()
+evaluate_our_bids_monte_carlo()
 #evaluate_optimal_bids_monte_carlo()
