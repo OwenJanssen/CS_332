@@ -4,6 +4,7 @@ import numpy as np
 
 df = pd.read_csv('bid_data.csv')
 our_bids = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+optimal_bids = [6, 12, 12, 21, 22, 31, 32, 41, 41, 52]
 
 def exact_winning_prob_utility(our_bid, value):
     # calculate winning prob 
@@ -22,13 +23,16 @@ def exact_winning_prob_utility(our_bid, value):
 
     # calculate utility
     utility = value - our_bid
+    print(value)
+    print(our_bid)
+    print(utility)
 
     return winning_prob, utility
 
 def evaluate_our_bids_exact():
-    bid_results = [0 for i in range(len(our_bids))]
-    for i in range(len(our_bids)):
-        bid_results[i] = exact_winning_prob_utility(our_bids[i], (i+1)*10)
+    bid_results = [0 for i in range(len(optimal_bids))]
+    for i in range(len(optimal_bids)):
+        bid_results[i] = exact_winning_prob_utility(optimal_bids[i], (i+1)*10)
     print("Exact our bid results")
     print(bid_results)
 
@@ -109,6 +113,6 @@ def evaluate_optimal_bids_monte_carlo():
     
 
 evaluate_our_bids_exact()
-evaluate_optimal_bids_exact()
-evaluate_our_bids_monte_carlo()
-evaluate_optimal_bids_monte_carlo()
+#evaluate_optimal_bids_exact()
+#evaluate_our_bids_monte_carlo()
+#evaluate_optimal_bids_monte_carlo()
