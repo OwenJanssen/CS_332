@@ -5,8 +5,7 @@ import numpy as np
 df = pd.read_csv('Project 1/bid_data.csv')
 our_bids = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
-## Functions for evaluating bids using all/exact data
-def exact_win_prob_utility(our_bid, value):
+def exact_winning_prob_utility(our_bid, value):
     # calculate winning prob 
     wins = 0
     for col_header in df.head():
