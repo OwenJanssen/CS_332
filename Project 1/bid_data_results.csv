@@ -10,7 +10,7 @@ Value,Our Bid,Pr[win],Utility,Expected Utility,,Optimal Bid,Pr[win],Utility,Expe
 80,40,0.5119,40,20.476,,41,0.55714,39,22.00714,,0.04524,-1,1.53114
 90,45,0.58571,45,26.35695,,41,0.56667,49,27.65,,-0.01905,4,1.29305
 100,50,0.62857,50,31.4285,,52,0.69286,48,33.37143,,0.06429,-2,1.94293
-,,,,,,,,,,,,,
+,,,,,,,,,,,,Average Difference:,0.910075
 Monte Carlo Calculation,,,,,,,,,,,,,
 Value,Our Bid,Pr[win],Utility,Expected Utility,,Optimal Bid,Pr[win],Utility,Expected Utility,,Pr[win] Difference,Utility Difference,Expected Utility Difference
 10,5,0.06173,5,0.30865,,4,0.024691358,6,0.14815,,-0.03704,1,-0.1605
@@ -23,3 +23,4 @@ Value,Our Bid,Pr[win],Utility,Expected Utility,,Optimal Bid,Pr[win],Utility,Expe
 80,40,0.60494,40,24.1976,,35,0.395061728,45,23.33333,,-0.20988,5,-0.86427
 90,45,0.60494,45,27.2223,,43,0.604938272,47,31.33333,,0,2,4.11103
 100,50,0.49383,50,24.6915,,44,0.580246914,56,37.33333,,0.08642,6,12.64183
+,,,,,,,,,,,,Average Difference:,2.802427
