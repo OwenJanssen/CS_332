@@ -26,6 +26,23 @@ def exponential_weights(v, epsilon, h):
     
     return weights, pi
 
+# a
+def adversarial_fair_payoffs():
+    return
+
+#b
+def bernoulli_payoffs():
+    return
+  
+#c  
+def data_in_the_wild():
+    return
+  
+#d  
+def adversarial_generative_model():
+    return
+
+
 # testing
 def test_example_from_class():
     weights, pi = exponential_weights(np.array([[1, 1, 0, 0], [0, 0, 1, 1]]), 1, 1)
