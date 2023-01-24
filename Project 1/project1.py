@@ -190,3 +190,10 @@ def part2(data):
 df = pd.read_csv('bid_data.csv')
 #part1(df)
 part2(df)
+
+# we're taking exact bid calc. using bid data,  finding optimal bids using formulas we wrote before, 
+# compare bids using Monte Carlo (ours vs. optimal from part 1) --> using monte carlo alg to compare bids we came up with to 
+# optimal bids from part 1, taking mean of all the expected values, taking it N amount of times, averaging over it
+# returns average diff in expected value
+
+# use optimal bids from part 1, and found optimal bids for each subset then compares them 
