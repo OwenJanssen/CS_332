@@ -136,6 +136,6 @@ def test_example_from_class():
  
 if __name__ == "__main__":
     test_example_from_class()
-    print("All tests passed")
+    print("Test passed")
     
     analyze_payoffs()
