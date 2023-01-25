@@ -12,6 +12,8 @@ import random
 def exponential_weights(v, epsilon, h):
     V = np.cumsum(v, axis=1)
     weights = np.power((1 + epsilon), V[:, :-1]/h)
+    # because we're referencing the previous column, the first
+    # column of ones gets removed so we need to add it back
     weights = np.insert(weights, 0, np.ones(v.shape[0]), axis=1)
     pi = np.divide(weights, np.sum(weights, axis=0))
     return weights, pi
