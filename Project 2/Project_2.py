@@ -41,6 +41,20 @@ def bernoulli_payoffs(actions, rounds):
                
     return payoffs
 
+#c
+def bulls_data():
+    data = np.genfromtxt('Project 2\BullsData.csv', delimiter=',')
+    # remove the dates/player names
+    data = np.delete(data, 0, axis=0) 
+    data = np.delete(data, -1, axis=0) 
+    data = np.delete(data, 0, axis=1)
+    
+    return data
+
+#d
+def poisson_payoffs(actions, rounds):
+    return np.array([[1, 1], [1, 1]])
+
 def random_pick(probability_array):
     random_number = random.random()
     cumulative_probability = 0.0
@@ -63,13 +77,13 @@ def regret(payoffs, EW):
 
     return 1 / n * (optimal_sum-EW_sum)
 
-def analyze_payoffs():
+def get_graphs_for_parameters():
     N = 100
     STEP = 250
     END = 10000
     a_rounds_regret = np.zeros(int(END/STEP))
     b_rounds_regret = np.zeros(int(END/STEP))
-    actions = 5
+    actions = 20
     for rounds in range(STEP, END, STEP):
         # average results from N samples
         a_sum = 0
@@ -85,6 +99,16 @@ def analyze_payoffs():
         a_rounds_regret[int(rounds/STEP)] = a_sum/N
         b_rounds_regret[int(rounds/STEP)] = b_sum/N
 
+    plt.plot(list(range(0, END, STEP)), a_rounds_regret, color="red", label="Adversarial Fair Payoff")
+    plt.plot(list(range(0, END, STEP)), b_rounds_regret, color="blue", label="Bernoulli Payoff")
+    plt.xlabel('Rounds')
+    plt.ylabel('Regret')
+    plt.title('Regret vs Rounds')
+    plt.legend()
+    plt.show()
+
+    STEP = 4
+    END = 100
     a_actions_regret = np.zeros(int(END/STEP))
     b_actions_regret = np.zeros(int(END/STEP))
     rounds = 20
@@ -103,14 +127,6 @@ def analyze_payoffs():
         a_actions_regret[int(actions/STEP)] = a_sum/N
         b_actions_regret[int(actions/STEP)] = b_sum/N
         
-    plt.plot(list(range(0, END, STEP)), a_rounds_regret, color="red", label="Adversarial Fair Payoff")
-    plt.plot(list(range(0, END, STEP)), b_rounds_regret, color="blue", label="Bernoulli Payoff")
-    plt.xlabel('Rounds')
-    plt.ylabel('Regret')
-    plt.title('Regret vs Rounds')
-    plt.legend()
-    plt.show()
-
     plt.plot(list(range(0, END, STEP)), a_actions_regret, color="red", label="Adversarial Fair Payoff")
     plt.plot(list(range(0, END, STEP)), b_actions_regret, color="blue", label="Bernoulli Payoff")
     plt.xlabel('Actions')
@@ -118,15 +134,58 @@ def analyze_payoffs():
     plt.title('Regret vs Actions')
     plt.legend()
     plt.show()
-    
-#c  
-def data_in_the_wild():
-    return
-  
-#d  
-def adversarial_generative_model():
-    # markov chains
-    return
+
+def analyze_payoffs(step, end):
+    N = 100
+    regrets = {
+        "Adversarial Fair": np.zeros(int(end/step)), 
+        "Bernoulli": np.zeros(int(end/step)), 
+        "Chicago Bulls": np.zeros(int(end/step)), 
+        "Poisson": np.zeros(int(end/step))
+    }
+    actions = 20
+    rounds = 250
+    for epsilon in range(0, end, step):
+        # average results from N samples
+        epsilon = float(epsilon)/100
+        a_sum = 0
+        b_sum = 0
+        c_sum = 0
+        d_sum = 0
+        for i in range(N):
+            a_payoffs = adversarial_fair_payoffs(actions, rounds)
+            b_payoffs = bernoulli_payoffs(actions, rounds)
+            c_payoffs = bulls_data()
+            d_payoffs = poisson_payoffs(actions, rounds)
+            _, a_EW = exponential_weights(a_payoffs, epsilon, 1)
+            _, b_EW = exponential_weights(b_payoffs, epsilon, 1)
+            _, c_EW = exponential_weights(c_payoffs, epsilon, 44) #44 is the max points scored in the data
+            _, d_EW = exponential_weights(d_payoffs, epsilon, 1)
+            a_sum += regret(a_payoffs, a_EW)
+            b_sum += regret(b_payoffs, b_EW)
+            c_sum += regret(c_payoffs, c_EW)
+            d_sum += regret(d_payoffs, d_EW)
+        regrets["Adversarial Fair"][int(epsilon/step)] = a_sum/N
+        regrets["Bernoulli"][int(epsilon/step)] = b_sum/N
+        regrets["Chicago Bulls"][int(epsilon/step)] = c_sum/N
+        regrets["Poisson"][int(epsilon/step)] = d_sum/N
+
+    return regrets
+
+def plot_regrets(regrets, step, end):
+    print(np.argmin(regrets["Adversarial Fair"]), np.min(regrets["Adversarial Fair"]))
+    print(np.argmin(regrets["Bernoulli"]), np.min(regrets["Bernoulli"]))
+    print(np.argmin(regrets["Chicago Bulls"]), np.min(regrets["Chicago Bulls"]))
+    print(np.argmin(regrets["Poisson"]), np.min(regrets["Poisson"]))
+    print(regrets)
+
+    for payoff in regrets.keys():
+        plt.plot(np.divide(list(range(0, end, step)), 100), regrets[payoff], label=payoff)
+    plt.xlabel('Epsilon')
+    plt.ylabel('Regret')
+    plt.title('Regret vs Epsilon')
+    plt.legend()
+    plt.show()
 
 # testing
 def test_example_from_class():
@@ -138,4 +197,7 @@ if __name__ == "__main__":
     test_example_from_class()
     print("Test passed")
     
-    analyze_payoffs()
+    step = 1
+    end = 100
+    regrets = analyze_payoffs(step, end)
+    plot_regrets(regrets, step, end)
