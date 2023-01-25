@@ -68,7 +68,6 @@ def analyze_payoffs():
     a_rounds_regret = np.zeros(int(END/STEP))
     b_rounds_regret = np.zeros(int(END/STEP))
     actions = 5
-    epsilons = [0, ]
     for rounds in range(STEP, END, STEP):
         # average results from N samples
         a_sum = 0
