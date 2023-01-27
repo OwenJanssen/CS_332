@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import math
 
 # inputs: 
 # v, an array of payoffs for each action at a given turn
@@ -51,9 +52,19 @@ def bulls_data():
     
     return data
 
+
+#helper for beta payoffs -- computes results of beta function
+def beta_function(a, b):
+    num = (math.factorial(a - 1)) * (math.factorial(b - 1))
+    den = math.factorial(a + b - 1)
+
+    return num / den
+
 #d
-def poisson_payoffs(actions, rounds):
-    return np.array([[1, 1], [1, 1]])
+def beta_payoffs(actions, rounds, a, b):
+    x = np.random.uniform(0, 1)
+    prob = (1 / beta_function(a, b)) * np.power(x, a - 1) *  np.power(1 - x, b - 1)
+    
 
 def random_pick(probability_array):
     random_number = random.random()
