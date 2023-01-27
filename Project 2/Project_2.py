@@ -61,10 +61,19 @@ def beta_function(a, b):
     return num / den
 
 #d
-def beta_payoffs(actions, rounds, a, b):
-    x = np.random.uniform(0, 1)
-    prob = (1 / beta_function(a, b)) * np.power(x, a - 1) *  np.power(1 - x, b - 1)
-    
+def beta_payoffs(actions, rounds):
+    alpha = 0.9
+    beta = 0.1
+    payoffs = np.zeros(shape=[actions, rounds])
+    for i in range(rounds):
+        for j in range(actions):
+            # do something
+            x = np.random.uniform(0, 1)
+            prob = (1 / beta_function(alpha, beta)) * np.power(x, alpha - 1) *  np.power(1 - x, beta - 1)
+            if np.random.uniform(0, 1) < prob:
+                payoffs[j][i] = 1
+    return payoffs
+
 
 def random_pick(probability_array):
     random_number = random.random()
@@ -152,7 +161,7 @@ def analyze_payoffs(step, end):
         "Adversarial Fair": np.zeros(int(end/step)), 
         "Bernoulli": np.zeros(int(end/step)), 
         "Chicago Bulls": np.zeros(int(end/step)), 
-        "Poisson": np.zeros(int(end/step))
+        "Beta": np.zeros(int(end/step))
     }
     actions = 20
     rounds = 250
@@ -167,7 +176,7 @@ def analyze_payoffs(step, end):
             a_payoffs = adversarial_fair_payoffs(actions, rounds)
             b_payoffs = bernoulli_payoffs(actions, rounds)
             c_payoffs = bulls_data()
-            d_payoffs = poisson_payoffs(actions, rounds)
+            d_payoffs = beta_payoffs(actions, rounds)
             _, a_EW = exponential_weights(a_payoffs, epsilon, 1)
             _, b_EW = exponential_weights(b_payoffs, epsilon, 1)
             _, c_EW = exponential_weights(c_payoffs, epsilon, 44) #44 is the max points scored in the data
@@ -179,7 +188,7 @@ def analyze_payoffs(step, end):
         regrets["Adversarial Fair"][int(epsilon/step)] = a_sum/N
         regrets["Bernoulli"][int(epsilon/step)] = b_sum/N
         regrets["Chicago Bulls"][int(epsilon/step)] = c_sum/N
-        regrets["Poisson"][int(epsilon/step)] = d_sum/N
+        regrets["Beta"][int(epsilon/step)] = d_sum/N
 
     return regrets
 
@@ -187,7 +196,7 @@ def plot_regrets(regrets, step, end):
     print(np.argmin(regrets["Adversarial Fair"]), np.min(regrets["Adversarial Fair"]))
     print(np.argmin(regrets["Bernoulli"]), np.min(regrets["Bernoulli"]))
     print(np.argmin(regrets["Chicago Bulls"]), np.min(regrets["Chicago Bulls"]))
-    print(np.argmin(regrets["Poisson"]), np.min(regrets["Poisson"]))
+    print(np.argmin(regrets["Beta"]), np.min(regrets["Beta"]))
     print(regrets)
 
     for payoff in regrets.keys():
