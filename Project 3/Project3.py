@@ -188,3 +188,79 @@ def beat_learning_alg(A, B):
 
     play = max(B[0][col], B[1][col])
     return play 
+
+def get_expected_scores(A,B,eq):
+    """
+    It computes the expected score of each player given the equilibrium probabilities and the payoff
+    matrices
+    
+    Args:
+      A: the payoff matrix for player A
+      B: the payoff matrix for player B
+      eq: equilibrium distribution of the row and column players
+    
+    Returns:
+      a_score: the expected score for A
+      b_score: the expected score for B
+    """
+    pr_row_0 = eq[0][0]
+    pr_row_1 = eq[0][1]
+    pr_col_0 = eq[1][0]
+    pr_col_1 = eq[1][1]
+    a_score = pr_col_0 * (pr_row_0 * A[0][0] + pr_row_1 * A[1][0]) + pr_col_1 * (pr_row_0 * A[0][1] + pr_row_1 * A[1][1])
+    b_score = pr_row_0 * (pr_col_0 * B[0][0] + pr_col_1 * B[0][1]) + pr_row_1 * (pr_col_0 * B[1][0] + pr_col_1 * B[1][1])
+
+    return a_score, b_score
+
+def winning_eq(A, B):
+    """
+    It finds the Nash equilibrium of the game, and then checks each equilibrium to see if it is a
+    winning equilibrium for player A. If it is, it returns that equilibrium. If not, it returns the
+    first Nash equilibrium
+    
+    Args:
+      A: The payoff matrix for player A
+      B: The payoff matrix for player B.
+    
+    Returns:
+      The winning equilibrium.
+    """
+    eq = nash_eq(A, B)
+    winning_eq = eq[0]
+    for e in eq:
+        a_score, b_score = get_expected_scores(A, B, e)
+        if a_score > b_score:
+            winning_eq = e
+            break
+    return winning_eq
+
+def beat_no_regret_algorithm(A, B):
+    """
+    We play the game 25 times, and each time we pick an action for player A according to the winning
+    equilibrium which favors A, and an action for player B according to the exponential weights algorithm. 
+    
+    We then check if player A's score is greater than player B's score. 
+    
+    If it is, we return True, otherwise we return False. 
+    
+    Args:
+      A: the payoff matrix for player A
+      B: payoff matrix for player B
+    
+    Returns:
+      A boolean value.
+    """
+    ROUNDS = 25
+    payoffs_B = np.zeros([2, ROUNDS])
+    score_A = 0
+    score_B = 0
+    a_winning_eq = winning_eq(A, B)[0]
+    for round in range(ROUNDS):
+        action_A = random_pick(a_winning_eq)
+        _, pi_B = exponential_weights(payoffs_B[:, 0:round+1], h=10)
+        action_B = random_pick(pi_B[:, round])
+        payoffs_B[0][round] = B[action_A][0]
+        payoffs_B[1][round] = B[action_A][1]
+        score_A += A[action_A][action_B]
+        score_B += B[action_A][action_B]
+    return score_A > score_B
