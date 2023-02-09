@@ -3,14 +3,20 @@ import nashpy as nash
 import math
 import matplotlib.pyplot as plt
 
-# inputs: 
-# v, an array of payoffs for each action at a given turn
-# epsilon, the learning rate
-# h, the range of the payoffs
-# outputs:
-# weights, weights for each action at a given turn
-# pi, optimal probabilities for picking each action at a given turn
 def exponential_weights(v, epsilon, h):
+    """
+    It gives suggestions to players for probabilities to pick actions given an array of previous payoffs 
+    of those actions.
+
+    Args:
+      v: an array of payoffs for each action at a given turn
+      epsilon: the learning rate
+      h: the range of the payoffs
+      
+    Returns:
+      weights: weights for each action at a given turn
+      pi: optimal probabilities for picking each action at a given turn
+    """
     V = np.cumsum(v, axis=1)
     weights = np.power((1 + epsilon), V[:, :-1]/h)
     # because we're referencing the previous column, the first
@@ -20,26 +26,58 @@ def exponential_weights(v, epsilon, h):
     pi = np.divide(weights, np.sum(weights, axis=0))
     return weights, pi
 
-# returns actual Nash eq given 2 2x2 arrays
-def bimatrix_game(A, B):
+def nash_eq(A, B):
+    """
+    It takes in a matrix A and a matrix B, and returns the Nash equilibrium of the game defined by A and
+    B
+    
+    Args:
+      A: payoff matrix for player row
+      B: payoff matrix for player column
+    
+    Returns:
+      A list of tuples. Each tuple contains the row and column indices of the Nash equilibrium.
+    """
     game = nash.Game(A, B)
     eq = game.support_enumeration()
-    return eq #returns optimal pick for each player 
+    return eq
 
-# generates a random bi-matrix game
 def generate_random_game():
+    """
+    It generates a random bimatrix game.
+    
+    Returns:
+      A: 2x2 numpy array with integer values 0-9
+      B: 2x2 numpy array with integer values 0-9
+    """
     A = np.random.randint(0, 10, size=(2, 2))
     B = np.random.randint(0, 10, size=(2, 2))
     return A, B
 
 # EW tests that return probabilities for all actions/rounds 
-def test_exponential_weights(A, B, epsilon=0.1):
+def test_exponential_weights(A, B, epsilon):
+    """
+    > We play the game 25 times, and at each round, we use the exponential weights algorithm to
+    calculate the probability of each action, and then we pick an action randomly based on the
+    probability. 
+    
+    We'll use the `test_exponential_weights` function
+    
+    Args
+      A: payoff matrix for player A
+      B: payoff matrix for player B
+      epsilon: the learning rate
+
+    Returns:
+      pi_A: the probability of A taking each action in each round
+      pi_B: the probability of A taking each action in each round
+    """
     ROUNDS = 25
     payoffs_A = np.zeros([2, ROUNDS])
     payoffs_B = np.zeros([2, ROUNDS])
     for round in range(ROUNDS):
-        _, pi_A = exponential_weights(payoffs_A[:, 0:round+1], epsilon, 1)
-        _, pi_B = exponential_weights(payoffs_B[:, 0:round+1], epsilon, 1)
+        _, pi_A = exponential_weights(payoffs_A[:, 0:round+1], epsilon, 10)
+        _, pi_B = exponential_weights(payoffs_B[:, 0:round+1], epsilon, 10)
         action_A = random_pick(pi_A[:, round])
         action_B = random_pick(pi_B[:, round])
         payoffs_A[0][round] = A[0][action_B]
@@ -48,12 +86,22 @@ def test_exponential_weights(A, B, epsilon=0.1):
         payoffs_B[0][round] = B[action_A][0]
         payoffs_B[1][round] = B[action_A][1]
         # print(f"B Payoffs {payoffs_B}")
-    _, pi_A = exponential_weights(payoffs_A, epsilon, 1)
-    _, pi_B = exponential_weights(payoffs_B, epsilon, 1)
+    _, pi_A = exponential_weights(payoffs_A, epsilon, 10)
+    _, pi_B = exponential_weights(payoffs_B, epsilon, 10)
     return pi_A, pi_B
 
 # randomly pick an index in the array according to the given probabilities in each element of the array
 def random_pick(probability_array):
+    """
+    It generates a random number between 0 and 1, and then returns the index of the first element in the
+    probability array that is greater than the random number
+    
+    Args:
+      probability_array: an array of probabilities, where the sum of all the probabilities is 1.0
+    
+    Returns:
+      The index of the element in the array that is greater than the random number.
+    """
     random_number = np.random.random()
     cumulative_probability = 0.0
     for index, probability in enumerate(probability_array):
@@ -62,14 +110,23 @@ def random_pick(probability_array):
             return index
     return len(probability_array) - 1
 
-# Monte Carlo tests to determine if EW converges to the nash equilibrium
 def monte_carlo_EW(epsilon):
-    N = 200
+    """
+    It generates 100 random games, and for each game, it runs the exponential weights algorithm and
+    checks if the results are within a reasonable threshold of the Nash equilibrium
+    
+    Args:
+      epsilon: the learning rate
+
+    Returns:
+      The probability that the algorithm converges to a nash equilibrium.
+    """
+    N = 100
     converges_to_nash_count = 0
     for i in range(N):
         A, B = generate_random_game()
         pi_A, pi_B = test_exponential_weights(A, B, epsilon)
-        eq = bimatrix_game(A, B)
+        eq = nash_eq(A, B)
         for i in eq:
             # test if the results from exponential weights are within a reasonable threshold of the nash equilibrium
             a_true_nash = i[0]
@@ -84,6 +141,42 @@ def monte_carlo_EW(epsilon):
     # print (converges_to_nash_count/N)
     return converges_to_nash_count/N
 
+def test_learning_rates_for_EW(divisor=1):
+    """
+    It runs a Monte Carlo simulation for each value of epsilon in the list epsilons, and returns the
+    list of epsilons and the list of results
+    
+    Args:
+      divisor: the learning rate is divided by this number. Defaults to 1
+    
+    Returns:
+      The epsilons and the results
+    """
+    epsilons = [i/divisor for i in range(100)]
+    results = [0 for i in range(len(epsilons))]
+    for i, e in enumerate(epsilons):
+        results[i] = monte_carlo_EW(e)
+
+    return epsilons, results
+
+def plot_learning_rates_for_EW(epsilons, results):
+    """
+    It plots the learning rates against the probability of convergence to Nash
+    
+    Args:
+      epsilons: a list of learning rates
+      results: a list of the probability of convergence to Nash for each learning rate
+    """
+    plt.plot(epsilons, results)
+    plt.xlabel('Epsilon - Learning Rate')
+    plt.ylabel('Pr[Convergence to Nash]')
+    plt.show()
+
+epsilons, results = test_learning_rates_for_EW(divisor=100)
+plot_learning_rates_for_EW(epsilons, results)
+epsilons, results = test_learning_rates_for_EW(divisor=1)
+plot_learning_rates_for_EW(epsilons, results)
+    
 #strategy: look at the nash eq --> always pick the one where we have the highest payoff
 def beat_learning_alg(A, B):
     game = nash.game(A,B)
@@ -95,15 +188,3 @@ def beat_learning_alg(A, B):
 
     play = max(B[0][col], B[1][col])
     return play 
-
-def test_learning_rates_for_EW():
-    epsilons = [i/10 for i in range(500)]
-    results = [0 for i in range(len(epsilons))]
-    for i, e in enumerate(epsilons):
-        results[i] = monte_carlo_EW(e)
-    plt.plot(epsilons, results)
-    plt.xlabel('Epsilon - Learning Rate')
-    plt.ylabel('Convergence to Nash Rate')
-    plt.show()
-    
-test_learning_rates_for_EW()
