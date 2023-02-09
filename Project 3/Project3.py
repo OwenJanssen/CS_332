@@ -234,7 +234,7 @@ def winning_eq(A, B):
             break
     return winning_eq
 
-def beat_no_regret_algorithm(A, B):
+def beat_no_regret(A, B):
     """
     We play the game 25 times, and each time we pick an action for player A according to the winning
     equilibrium which favors A, and an action for player B according to the exponential weights algorithm. 
@@ -264,3 +264,19 @@ def beat_no_regret_algorithm(A, B):
         score_A += A[action_A][action_B]
         score_B += B[action_A][action_B]
     return score_A > score_B
+
+def test_beat_no_regret():
+    """
+    It generates a random game, and then checks whether the no-regret strategy beats the best response
+    strategy
+    
+    Returns:
+      The probability that the no-regret strategy beats the optimal strategy.
+    """
+    N = 10000
+    wins = 0
+    for _ in range(N):
+        A, B = generate_random_game()
+        if beat_no_regret(A, B):
+            wins += 1
+    return wins/N
