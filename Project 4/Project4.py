@@ -24,6 +24,24 @@ def exponential_weights(v, epsilon, h):
     pi = np.divide(weights, np.sum(weights, axis=0))
     return weights, pi
 
+def revenue(bidder_values, items, rp):
+    """
+    Returns the revenue for a 2nd price (items+1 price) auction with reserve
+
+    Args:
+      bidder_values: values of bidders participating in the auction
+      items: number of items being sold
+      rp: reserve price of auction
+      
+    Returns:
+      the revenue of the auction
+    """
+    values_over_rp = [v for v in bidder_values if v > rp]
+    bidders_over_rp = len(values_over_rp)
+    if items < bidders_over_rp:
+        return bidder_values[len(bidder_values)-1-items] * items
+    else:
+        return rp * bidders_over_rp 
 
 def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, rounds, items):
     """
@@ -44,15 +62,11 @@ def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, ro
         bidder_values = [inverse_distribution(np.random.uniform()) for _ in range(bidders)]
         bidder_values.sort()
         
-        if bidders == 1:
-            revenues = [0 if bidder_values[0] < rp else rp for rp in reserve_prices]
-        else:  
-            # fix, consider some items gets sold but not all
-            revenues = [0 if bidder_values[bidders-1] < rp else max(bidder_values[bidders-1-items], rp) for rp in reserve_prices]
+        revenues = [revenue(bidder_values, items, rp) for rp in reserve_prices]
         v[:, round] = revenues    
     return v
 
-def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds = 1000):
+def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000):
     """
     It takes a list of bidders, an inverse distribution, and the number of items, and returns the
     expected reserve price
@@ -60,12 +74,12 @@ def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds = 100
     Args:
         bidders: the number of bidders
         distributions: the distribution functions of the bidders' values
-        items: number of items to be sold, defaults to 1 (optional)
+        items: number of items to be sold
+        rounds: number of rounds to use for exponential weights
     
     Returns:
         the expected reserve price from exponential weights
     """
-    
     reserve_prices = np.divide(list(range(0, 10)), 10/distributions["F inverse"](1))
     optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)
     v = make_reserve_price_payoffs(bidders, distributions["F inverse"], reserve_prices, rounds, items)
@@ -137,20 +151,12 @@ distributions_3 = {
     "E": F_3_E
 }
 
-def optimal_values(reserve, distribution, bids, items, density ):
-    # expected virtual welfare = expected revenue
-    # inverse virtual value = optimal reserve price 
-    
-   # expected_revenue = np.sum(v - ((1 - distribution(v)) / density(v)) for v in bids)
-    return 0
-
 def expected_revenue(distribution, r, bidders, items):
     pr = distribution["F"](r)
 
     if (bidders == 1):
         return r * (1-pr)
     
-    # print(pr)
     pr_sum = 0
     # case 1, no bidders over
     case1 = (pr ** bidders) * 0
@@ -163,48 +169,67 @@ def expected_revenue(distribution, r, bidders, items):
     # case 3, more than one bidder are over
     case3 = 0
     for i in range(2, bidders+1):
-        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](1, distribution["F"](r), i, items)
+        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](distribution["F"](r), 1, i, min(items+1, i))
         pr_sum += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i))
+        
     return case1 + case2 + case3
 
-def part1():
+def part1_bidders():
     distributions = [distributions_1, distributions_2, distributions_3]
-    # MAX_BIDDERS = 250
-    # x = [list(range(MAX_BIDDERS)) for _ in distributions]
-    # optimal = [[0 for _ in x[0]] for _ in x]
-    # online_learning = [[0 for _ in x[0]] for _ in x]
-    # for i, dist in enumerate(distributions):
-    #     # print("NEW DISTRIBUTION")
-    #     for bidders in range(1, MAX_BIDDERS):
-    #         exp_rp = expected_reserve_price_from_EW(bidders, dist, 1, 100)
-    #         # print(f"Bidders: {bidders}, RP: {exp_rp}")
-    #         opt_rp = dist["Optimal RP"]
-    #         optimal[i][bidders]=expected_revenue(dist, opt_rp, bidders, 1)
-    #         online_learning[i][bidders]=expected_revenue(dist, exp_rp, bidders, 1)
-    # plt.plot(x[0], online_learning[0], label='F(z) = z Online Learning', color="Red")
-    # plt.plot(x[1], online_learning[1], label='F(z) = z^2 Online Learning', color="Blue")
-    # plt.plot(x[2], np.divide(online_learning[2], 4), label='F(z) = z/4 (scaled to [0, 1]) Online Learning', color="Green")
-    # plt.plot(x[0], optimal[0], label='F(z) = z Optimal', color="Red", linestyle="dashed")
-    # plt.plot(x[1], optimal[1], label='F(z) = z^2 Optimal', color="Blue", linestyle="dashed")
-    # plt.plot(x[2], np.divide(optimal[2], 4), label='F(z) = z/4 (scaled to [0, 1]) Optimal', color="Green", linestyle="dashed")
-    # plt.xlabel("Bidders")
-    # plt.ylabel("Revenue")
-    # plt.legend()
-    # plt.show()
-    # print(f"The difference between optimal and online learning expected revenue for F(z) = z is {optimal[0][MAX_BIDDERS-1]-online_learning[0][MAX_BIDDERS-1]}, for F(z) = z^2 is {optimal[1][MAX_BIDDERS-1]-online_learning[1][MAX_BIDDERS-1]}, for F(z) = z/4 scaled to [0, 1]is {(optimal[2][MAX_BIDDERS-1]-online_learning[2][MAX_BIDDERS-1])/4}")
+    MAX_BIDDERS = 250
+    bidders = [list(range(1, MAX_BIDDERS)) for _ in distributions]
+    revenue_diff = [[0 for _ in bidders[0]] for _ in bidders]
+    for i, dist in enumerate(distributions):
+        for b in bidders[i]:
+            exp_rp = expected_reserve_price_from_EW(b, dist, 1, 1000)
+            opt_rp = dist["Optimal RP"]
+            revenue_diff[i][b-1]=abs(expected_revenue(dist, opt_rp, b, 1)-expected_revenue(dist, exp_rp, b, 1))
+    plt.plot(bidders[0], revenue_diff[0], label='F(z) = z', color="Red")
+    plt.plot(bidders[1], revenue_diff[1], label='F(z) = z^2', color="Blue")
+    plt.plot(bidders[2], np.divide(revenue_diff[2], 4), label='F(z) = z/4 (scaled to [0, 1])', color="Green")
+    plt.xlabel("Bidders")
+    plt.ylabel("$\Delta$Revenue")
+    plt.title(f"Bidders vs $\Delta$Revenue for 1 item")
+    plt.legend()
+    plt.show()
 
-    rounds_arr = [[i*10 for i in range(11)] for _ in distributions]
+def part1_items():   
+    distributions = [distributions_1, distributions_2, distributions_3]
+    bidders=100
+    items_arr = [list(range(1, bidders)) for _ in distributions]
+    revenue_diff = [[0 for _ in items_arr[0]] for _ in items_arr]
+    for i, dist in enumerate(distributions):
+        for items in items_arr[i]:
+            exp_rp = expected_reserve_price_from_EW(bidders, dist, items, 1000)
+            opt_rp = dist["Optimal RP"]
+            revenue_diff[i][items-1]=expected_revenue(dist, opt_rp, bidders, items)-expected_revenue(dist, exp_rp, bidders, items)
+    plt.plot(items_arr[0], revenue_diff[0], label='F(z) = z', color="Red")
+    plt.plot(items_arr[1], revenue_diff[1], label='F(z) = z^2', color="Blue")
+    plt.plot(items_arr[2], np.divide(revenue_diff[2], 4), label='F(z) = z/4 (scaled to [0, 1])', color="Green")
+    plt.xlabel("Items")
+    plt.ylabel("$\Delta$Revenue")
+    plt.title(f"Items vs $\Delta$Revenue for {bidders} bidders")
+    plt.legend()
+    plt.show()
+
+def part1_rounds():
+    distributions = [distributions_1, distributions_2, distributions_3]
+    rounds_arr = [[i*100 for i in range(1, 100)] for _ in distributions]
     revenue_diff = [[0 for _ in rounds_arr[0]] for _ in rounds_arr]
     for i, dist in enumerate(distributions): 
         for j, rounds in enumerate(rounds_arr[i]):
-            exp_rp = expected_reserve_price_from_EW(100, dist, 1, rounds)
-            opt_rp = dist["Optimal RP"]
-            revenue_diff[i][j]=abs(expected_revenue(dist, exp_rp, 100, 1)-expected_revenue(dist, opt_rp, 100, 1))
+            sum = 0
+            for _ in range(10):
+                exp_rp = expected_reserve_price_from_EW(2, dist, 1, rounds)
+                opt_rp = dist["Optimal RP"]
+                sum+=abs(expected_revenue(dist, exp_rp, 2, 1)-expected_revenue(dist, opt_rp, 2, 1))
+            revenue_diff[i][j]=sum/100
     plt.plot(rounds_arr[0], revenue_diff[0], label='F(z) = z')
     plt.plot(rounds_arr[1], revenue_diff[1], label='F(z) = z/4')
     plt.plot(rounds_arr[2], np.divide(revenue_diff[2], 4), label='F(z) = z^2')
     plt.xlabel("Rounds")
-    plt.ylabel("|Online Learning Revenue - Optimal Revenue|")
+    plt.ylabel("$\Delta$Revenue")
+    plt.title(f"Rounds vs $\Delta$Revenue for 2 bidders and 1 item")
     plt.legend()
     plt.show()
 
@@ -232,5 +257,5 @@ def introductions_actual(employee_distributions, employer_distributions, employe
 
 
 if __name__ == '__main__':
-    print("TEST PASSED" if expected_revenue(distributions_1, 0.5, 2, 1)==5/12 else "TEST FAILED")
-    part1()
+    print("TEST PASSED" if abs(expected_revenue(distributions_1, 0.5, 2, 1) - 5/12) < 0.001 else "TEST FAILED")
+    part1_rounds()
