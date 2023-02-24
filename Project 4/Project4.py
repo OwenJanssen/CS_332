@@ -87,7 +87,46 @@ def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000)
     
     expected_reserve_price = np.sum([prob*rp for prob, rp in zip(probabilities[:, rounds-1], reserve_prices)])
     return expected_reserve_price
+
+def expected_revenue(distribution, r, bidders, items):
+    """
+    The expected revenue is the probability that no one bids over the reserve price times the reserve
+    price plus the probability that one person bids over the reserve price times the reserve price plus
+    the probability that more than one person bids over the reserve price times the expected value of
+    the bids of the people who bid over the reserve price
     
+    Args:
+      distribution: the distribution of the bidders' values
+      r: the reserve price
+      bidders: number of bidders
+      items: number of items
+    
+    Returns:
+      The expected revenue of the auction.
+    """
+    pr = distribution["F"](r)
+
+    if (bidders == 1):
+        return r * (1-pr)
+    
+    pr_sum = 0
+    # case 1, no bidders over
+    case1 = (pr ** bidders) * 0
+    pr_sum += (pr ** bidders)
+
+    # case 2, only one bidder over
+    case2 = (pr**(bidders-1) * (1-pr) * bidders) * r
+    pr_sum += (pr**(bidders-1) * (1-pr) * bidders)
+
+    # case 3, more than one bidder are over
+    case3 = 0
+    for i in range(2, bidders+1):
+        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](distribution["F"](r), 1, i, min(items+1, i))
+        pr_sum += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i))
+        
+    return case1 + case2 + case3
+
+# Functions for different CDFs
 def F_1(v):
     return v
 
@@ -151,30 +190,12 @@ distributions_3 = {
     "E": F_3_E
 }
 
-def expected_revenue(distribution, r, bidders, items):
-    pr = distribution["F"](r)
-
-    if (bidders == 1):
-        return r * (1-pr)
-    
-    pr_sum = 0
-    # case 1, no bidders over
-    case1 = (pr ** bidders) * 0
-    pr_sum += (pr ** bidders)
-
-    # case 2, only one bidder over
-    case2 = (pr**(bidders-1) * (1-pr) * bidders) * r
-    pr_sum += (pr**(bidders-1) * (1-pr) * bidders)
-
-    # case 3, more than one bidder are over
-    case3 = 0
-    for i in range(2, bidders+1):
-        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](distribution["F"](r), 1, i, min(items+1, i))
-        pr_sum += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i))
-        
-    return case1 + case2 + case3
-
+# Part 1: 
 def part1_bidders():
+    """
+    It plots the difference in revenue between the optimal reserve price and the expected reserve price
+    for each distribution, for each number of bidders
+    """
     distributions = [distributions_1, distributions_2, distributions_3]
     MAX_BIDDERS = 250
     bidders = [list(range(1, MAX_BIDDERS)) for _ in distributions]
@@ -194,6 +215,10 @@ def part1_bidders():
     plt.show()
 
 def part1_items():   
+    """
+    It plots the difference in revenue between the optimal reserve price and the expected reserve price
+    for different distributions and different numbers of items
+    """
     distributions = [distributions_1, distributions_2, distributions_3]
     bidders=100
     items_arr = [list(range(1, bidders)) for _ in distributions]
@@ -213,6 +238,10 @@ def part1_items():
     plt.show()
 
 def part1_rounds():
+    """
+    It takes in a distribution, a number of rounds, and a number of bidders, and returns the expected
+    revenue difference between the optimal reserve price and the expected reserve price
+    """
     distributions = [distributions_1, distributions_2, distributions_3]
     rounds_arr = [[i*100 for i in range(1, 100)] for _ in distributions]
     revenue_diff = [[0 for _ in rounds_arr[0]] for _ in rounds_arr]
