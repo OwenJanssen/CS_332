@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import random
 
 def exponential_weights(v, epsilon, h):
     """
@@ -58,7 +59,7 @@ def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, ro
     """
     v = np.zeros((len(reserve_prices), rounds))
     
-    for round in range(v.shape[1]):
+    for round in range(rounds):
         bidder_values = [inverse_distribution(np.random.uniform()) for _ in range(bidders)]
         bidder_values.sort()
         
@@ -80,8 +81,8 @@ def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000)
     Returns:
         the expected reserve price from exponential weights
     """
-    reserve_prices = np.divide(list(range(0, 10)), 10/distributions["F inverse"](1))
-    optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)
+    reserve_prices = np.divide(list(range(0, 100)), 100/distributions["F inverse"](1))
+    optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)/1000
     v = make_reserve_price_payoffs(bidders, distributions["F inverse"], reserve_prices, rounds, items)
     _, probabilities = exponential_weights(v, optimal_epsilon, distributions["F inverse"](1))
     
@@ -121,7 +122,7 @@ def expected_revenue(distribution, r, bidders, items):
     # case 3, more than one bidder are over
     case3 = 0
     for i in range(2, bidders+1):
-        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](distribution["F"](r), 1, i, min(items+1, i))
+        case3 += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i)) * distribution["E"](distribution["F"](r), 1, i, min(items+1, i)) * min(items, i)
         pr_sum += (pr**(bidders-i) * (1-pr)**i * math.comb(bidders, i))
         
     return case1 + case2 + case3
@@ -140,12 +141,16 @@ def F_1_E(low, high, bidders, i):
     uniform_sample = ((high-low)/(bidders+1))*(bidders-i+1)+low
     return F_1_inverse(uniform_sample)
 
+def vv_1(v):
+    return 2*v - 1
+
 distributions_1 = {
     "F": F_1,
     "F inverse": F_1_inverse,
     "f": F_1_density,
     "Optimal RP": 1/2,
-    "E": F_1_E
+    "E": F_1_E,
+    "virtual value": vv_1
 }
 
 def F_2(v):
@@ -161,12 +166,16 @@ def F_2_E(low, high, bidders, i):
     uniform_sample = ((high-low)/(bidders+1))*(bidders-i+1)+low
     return F_2_inverse(uniform_sample)
 
+def vv_2(v):
+    return v - ((1 - v**2) / 2*v)
+
 distributions_2 = {
     "F": F_2,
     "F inverse": F_2_inverse,
     "f": F_2_density,
     "Optimal RP": (1/3)**(1/2),
-    "E": F_2_E
+    "E": F_2_E,
+    "virtual value": vv_2
 }
 
 def F_3(v):
@@ -188,6 +197,31 @@ distributions_3 = {
     "f": F_3_density,
     "Optimal RP": 2,
     "E": F_3_E
+}
+
+def F_4(v):
+    return math.sqrt(v)
+
+def F_4_inverse(v):
+    return v**2
+
+def f_4(v):
+    return 1 / (2 * math.sqrt(v))
+
+def F_4_E(low, high, bidders, i):
+    uniform_sample = ((high-low)/(bidders+1))*(bidders-i+1)+low
+    return F_4_inverse(uniform_sample)
+
+def vv_4(v):
+    return 3 * v - 2 * math.sqrt(v)
+
+distributions_4 = {
+    "F": F_4,
+    "F inverse": F_4_inverse,
+    "f": f_4,
+    "Optimal RP": 0,
+    "E": F_4_E,
+    "virtual value": vv_4
 }
 
 # Part 1: 
@@ -220,14 +254,14 @@ def part1_items():
     for different distributions and different numbers of items
     """
     distributions = [distributions_1, distributions_2, distributions_3]
-    bidders=100
+    bidders=25
     items_arr = [list(range(1, bidders)) for _ in distributions]
     revenue_diff = [[0 for _ in items_arr[0]] for _ in items_arr]
     for i, dist in enumerate(distributions):
         for items in items_arr[i]:
             exp_rp = expected_reserve_price_from_EW(bidders, dist, items, 1000)
             opt_rp = dist["Optimal RP"]
-            revenue_diff[i][items-1]=expected_revenue(dist, opt_rp, bidders, items)-expected_revenue(dist, exp_rp, bidders, items)
+            revenue_diff[i][items-1]=expected_revenue(dist, opt_rp, bidders, items) - expected_revenue(dist, exp_rp, bidders, items)
     plt.plot(items_arr[0], revenue_diff[0], label='F(z) = z', color="Red")
     plt.plot(items_arr[1], revenue_diff[1], label='F(z) = z^2', color="Blue")
     plt.plot(items_arr[2], np.divide(revenue_diff[2], 4), label='F(z) = z/4 (scaled to [0, 1])', color="Green")
@@ -269,22 +303,81 @@ def part1_rounds():
     
 # generalized: for i in range bidders: expected_revenue += 2(v_i) + h
 
-def introductions_actual(employee_distributions, employer_distributions, employee_values, employer_values):
+# virtual value formulas for each distribution ~ U[0, 1] 
+# F(z) = z, F_2(z) = z^2, F_3(z) = sqrt(z) --> computer vv formula
+# truthful mechanism = introduce them if the sum of their virtual values is greater than 0
+# payoffs: 1 or 0
+# 
+
+def make_introduction_payoffs(distributions, rounds):
+    v = np.zeros((len(distributions), rounds))
+    
+    for round in range(rounds):
+        payoffs = [0 for _ in distributions]
+        values = [dist["virtual value"](np.random.uniform()) for dist in distributions]
+        should_introduce = False
+        for i in range(len(values)-1):
+            # values[0] is the employee
+            if values[i+1] + values[0] > 0:
+                should_introduce = True
+                payoffs[i+1] = 1
+        if not should_introduce:
+            payoffs[0] = 1
+        v[:, round] = payoffs
+    return v
+
+def introductions_optimal(employee_distributions, employers_distributions):
     # distributions is an array that looks like [0, h] for every person
     # values is a list of value for each person
 
-    introductions = np.zeros(len(employee_values), len(employer_values))
-    expected_revenues = np.zeros(len(employee_values), len(employer_values))
-    for i in range(len(employee_values)):
-        for j in range(len(employer_values)):
-            expected_revenues[i, j] = 2 * employee_values[i] - employee_distributions[i][1] + 2 * employer_values[j] -  employer_distributions[j][1]
-            introductions[i][j] = True if expected_revenues[i][j] > 0 else False
+    # get expected values for employee and employers for their distributions between 0 and 1
+    employee_value = employee_distributions["E"](0, 1, 1, 1)
+    employer_values = [dist["E"](0, 1, 1, 1) for dist in employers_distributions]
+    
+    introductions = np.zeros(1+len(employers_distributions))
+    should_meet = False
+    for i in range(len(employers_distributions)):
+        expected_revenue = employee_distributions["virtual value"](employee_value) + employers_distributions[i]["virtual value"](employer_values[i])
+        if expected_revenue > 0:
+            introductions[i+1] = 1
+            should_meet = True
+    if not should_meet:
+        introductions[0] = 1
 
-            
-   
-   
+    return introductions
 
+def introductions_EW(distributions, rounds=1000):
+    optimal_epsilon = np.sqrt(np.log(len(distributions))/rounds)
+    v = make_introduction_payoffs(distributions, rounds)
+    _, probabilities = exponential_weights(v, optimal_epsilon, 1)
+
+    return probabilities[:, -1]
+
+def part2():
+    rounds = [i*10 for i in range(1, 100)]
+    intro_diffs = [0 for _ in rounds]
+    
+    N = 1000
+    for i in range(len(rounds)):
+        for _ in range(N):
+            distrib = [distributions_1, distributions_2, distributions_4]
+            employee_distribution = random.choice(distrib)
+            distrib.remove(employee_distribution)
+            employer_distributions = [random.choice(distrib)]
+
+            opt_intro = introductions_optimal(employee_distribution, employer_distributions)
+            ew_intro = introductions_EW(np.concatenate([[employee_distribution], employer_distributions]))
+            intro_diffs[i] += np.sum([abs(o-ew) for o, ew in zip(opt_intro, ew_intro)])/2
+        intro_diffs[i] /= N
+
+    plt.plot(rounds, intro_diffs)
+    plt.xlabel("Rounds")
+    plt.ylabel("$\Delta$Introduction Probabilities")
+    plt.title(f"Rounds vs $\Delta$Introduction Probabilities")
+    plt.show()
+    
 
 if __name__ == '__main__':
     print("TEST PASSED" if abs(expected_revenue(distributions_1, 0.5, 2, 1) - 5/12) < 0.001 else "TEST FAILED")
-    part1_rounds()
+    #part1_rounds()
+    part2()
