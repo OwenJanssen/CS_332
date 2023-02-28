@@ -81,8 +81,8 @@ def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000)
     Returns:
         the expected reserve price from exponential weights
     """
-    reserve_prices = np.divide(list(range(0, 100)), 100/distributions["F inverse"](1))
-    optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)/1000
+    reserve_prices = np.divide(list(range(0, 5)), 5/distributions["F inverse"](1))
+    optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)
     v = make_reserve_price_payoffs(bidders, distributions["F inverse"], reserve_prices, rounds, items)
     _, probabilities = exponential_weights(v, optimal_epsilon, distributions["F inverse"](1))
     
@@ -310,6 +310,19 @@ def part1_rounds():
 # 
 
 def make_introduction_payoffs(distributions, rounds):
+    """
+    It takes a list of distributions and a number of rounds, and returns a matrix of payoffs. The rows
+    of the matrix correspond to the no introduction at index 0 then introductions between the first distribution
+    and the following ones, and the columns correspond to the rounds
+    
+    Args:
+      distributions: a list of dictionaries, each of which has a "virtual value" function that takes a
+    random number and returns a value.
+      rounds: the number of rounds to simulate
+    
+    Returns:
+      A matrix of payoffs for each round.
+    """
     v = np.zeros((len(distributions), rounds))
     
     for round in range(rounds):
@@ -327,9 +340,18 @@ def make_introduction_payoffs(distributions, rounds):
     return v
 
 def introductions_optimal(employee_distributions, employers_distributions):
-    # distributions is an array that looks like [0, h] for every person
-    # values is a list of value for each person
-
+    """
+    If the expected revenue of meeting with an employer is greater than 0, then introduce the employee
+    to that employer. Otherwise, introduce the employee to no one
+    
+    Args:
+      employee_distributions: a dictionary with keys "E" and "virtual value"
+      employers_distributions: a list of dictionaries, each dictionary is a distribution for an
+    employer.
+    
+    Returns:
+      The optimal introductions for the employee.
+    """
     # get expected values for employee and employers for their distributions between 0 and 1
     employee_value = employee_distributions["E"](0, 1, 1, 1)
     employer_values = [dist["E"](0, 1, 1, 1) for dist in employers_distributions]
@@ -347,6 +369,17 @@ def introductions_optimal(employee_distributions, employers_distributions):
     return introductions
 
 def introductions_EW(distributions, rounds=1000):
+    """
+    It takes a list of distributions and returns the probability of no introduction or introduction between distribution[0]
+    and other distributions, being selected after 1000 rounds of the Exponential Weights algorithm
+    
+    Args:
+      distributions: a list of distributions, each of which is a list of probabilities.
+      rounds: the number of rounds of the game. Defaults to 1000
+    
+    Returns:
+      The probability of each distribution being the best.
+    """
     optimal_epsilon = np.sqrt(np.log(len(distributions))/rounds)
     v = make_introduction_payoffs(distributions, rounds)
     _, probabilities = exponential_weights(v, optimal_epsilon, 1)
@@ -380,4 +413,4 @@ def part2():
 if __name__ == '__main__':
     print("TEST PASSED" if abs(expected_revenue(distributions_1, 0.5, 2, 1) - 5/12) < 0.001 else "TEST FAILED")
     #part1_rounds()
-    part2()
+    part1_rounds()
