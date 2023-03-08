@@ -148,3 +148,62 @@ part_1()
 # bids, qualities = make_bids_and_qualities(values, 5)
 # infer_value(bids, qualities, 0, 2)
 # print(bids)
+
+def revenue(bidder_values, items, rp):
+    """
+    Returns the revenue for a 2nd price (items+1 price) auction with reserve
+
+    Args:
+      bidder_values: values of bidders participating in the auction
+      items: number of items being sold
+      rp: reserve price of auction
+      
+    Returns:
+      the revenue of the auction
+    """
+    values_over_rp = [v for v in bidder_values if v > rp]
+    bidders_over_rp = len(values_over_rp)
+    if items < bidders_over_rp:
+        return bidder_values[len(bidder_values)-1-items] * items
+    else:
+        return rp * bidders_over_rp 
+    
+def multi_unit_auction(values, rounds, rp, k):
+    return 
+
+def part_2():
+    N = 5
+    rounds_arr = [(i+1)*10 for i in range(10)]
+    k_arr = [i for i in range(5)]
+    step_4_revenue = [0 for i in range(10)]
+    optimal_endowed_revenue = revenue([1, 1.5, 2, 2,5], 1, 0)
+    step_5_revenue = [0 for i in range(10)]
+
+    for rounds_i, rounds in enumerate(rounds_arr):
+        for _ in range(N):
+          values = [1, 1.5, 2, 2.5] # step 1
+          inferred_vals = [0, 0, 0, 0]
+          bids, qualities = multi_unit_auction(values, rounds, 0, 1) #step 2, for now using k = 1, can change later
+          error = 0
+          for i, v in enumerate(values):
+              infered_value = round(infer_value(bids, qualities, i), 3) #step 3
+              inferred_vals[i] = infered_value
+          step_4_revenue[rounds_i] = revenue(inferred_vals, 1, 0.5) #step 4, optimal reserve price for F(v) = v auction = 0.5
+    # step 5:
+    for rounds_i, rounds in enumerate(rounds_arr):
+        for _ in range(N):
+          values = [1, 1.5, 2, 2.5] 
+          inferred_vals = [0, 0, 0, 0]
+          bids, qualities = multi_unit_auction(values, rounds, 0.5, 1)
+          for i, v in enumerate(values):
+              infered_value = round(infer_value(bids, qualities, i), 3) #step 3
+              inferred_vals[i] = infered_value
+          step_5_revenue[rounds_i] = revenue(inferred_vals, 1, 0.5)
+
+    plt.plot(rounds_arr, step_4_revenue, label='optimized parameters max revenue with inferred vals', color="Red")
+    plt.plot(rounds_arr, step_5_revenue, label='new mechanism max revenue', color="Blue" )
+    plt.plot(rounds_arr, optimal_endowed_revenue, label='optimal endowed revenue', color="Green")
+    plt.xlabel("Rounds")
+    plt.ylabel("Revenue")
+    plt.show()
+                
