@@ -96,8 +96,8 @@ def regret_for_z(bids, qualities, j, v, z):
     x_sum /= n
     p_sum /= n
     regret = v * x_sum - p_sum
-    print(
-        f"Regret: {regret}, z: {z}, Rationalizable: {regret >= -1 * 0.1}, x: {x_sum}, p: {p_sum}")
+    # print(
+    #     f"Regret: {regret}, z: {z}, Rationalizable: {regret >= -1 * 0.1}, x: {x_sum}, p: {p_sum}")
     # print(x_sum, p_sum)
     return regret
 
@@ -278,7 +278,7 @@ def part_2():
     rounds_arr = [(i+1)*10 for i in range(10)]
     items_arr = [] # not sure how to change number of items
     step_4_revenue = [0 for i in range(10)]
-    optimal_endowed_revenue = revenue([1, 1.5, 2, 2,5], 1, 0)
+    optimal_endowed_revenue = revenue([1, 1.5, 2, 2.5], 1, 0)
     step_5_revenue = [0 for i in range(10)]
 
     for rounds_i, rounds in enumerate(rounds_arr):
@@ -305,9 +305,10 @@ def part_2():
 
     plt.plot(rounds_arr, step_4_revenue, label='optimized parameters max revenue with inferred vals', color="Red")
     plt.plot(rounds_arr, step_5_revenue, label='new mechanism max revenue', color="Blue" )
-    plt.plot(rounds_arr, optimal_endowed_revenue, label='optimal endowed revenue', color="Green")
+    plt.plot(rounds_arr, [optimal_endowed_revenue for _ in rounds_arr], label='optimal endowed revenue', color="Green")
     plt.xlabel("Rounds")
     plt.ylabel("Revenue")
+    plt.legend()
     plt.show()
                 
 part_2()
