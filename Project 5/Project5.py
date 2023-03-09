@@ -296,7 +296,8 @@ def part_2():
         for _ in range(N):
           values = [1, 1.5, 2, 2.5] 
           inferred_vals = [0, 0, 0, 0]
-          bids, qualities = multi_unit_auction(values, rounds, expected_reserve_price_from_EW(values, distributions_1), 1)
+          for items in items_arr:
+            bids, qualities = multi_unit_auction(values, rounds, expected_reserve_price_from_EW(values, distributions_1, items, 1000), 1)
           for i, v in enumerate(values):
               infered_value = round(infer_value(bids, qualities, i), 3) #step 3
               inferred_vals[i] = infered_value
