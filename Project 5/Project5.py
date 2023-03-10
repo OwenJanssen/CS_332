@@ -78,47 +78,76 @@ def make_bids_and_qualities(values, rounds):
     return bids, qualities
 
 
-def regret_for_z(bids, qualities, j, v, z):
+def delta_x_and_delta_p(bids, qualities, j):
+    """
+    It takes in the bids and qualities of all the bidders, and the index of the bidder we're interested
+    in, and returns the change in the number of times the bidder wins and the change in the bidder's
+    payment as a function of the bidder's bid
+
+    Args:
+      bids: a matrix of bids, where each row is a bidder and each column is a round
+      qualities: a matrix of size (num_agents, num_rounds)
+      j: the bidder we're looking at
+
+    Returns:
+      delta_x and delta_p are being returned.
+    """
+    num_z = 100
+    delta_x = np.zeros(num_z)
+    delta_p = np.zeros(num_z)
+    max_z = 5
     n = len(bids[0])
-    x_sum = 0
-    p_sum = 0
-    for round in range(n):
-        this_rounds_bids = np.copy(bids[:, round])
-        this_rounds_bids[j] = z
-        actual_winner = np.argmax(np.multiply(
-            qualities[:, round], bids[:, round]))
-        z_winner = np.argmax(np.multiply(
-            qualities[:, round], this_rounds_bids))
+    for i in range(num_z):
+        z = max_z * i / num_z
 
-        x_sum += (1 if actual_winner == j else 0) - (1 if z_winner == j else 0)
-        p_sum += (bids[j, round] if actual_winner ==
-                  j else 0) - (z if z_winner == j else 0)
-    x_sum /= n
-    p_sum /= n
-    regret = v * x_sum - p_sum
-    # print(
-    #     f"Regret: {regret}, z: {z}, Rationalizable: {regret >= -1 * 0.1}, x: {x_sum}, p: {p_sum}")
-    # print(x_sum, p_sum)
-    return regret
+        for round in range(n):
+            this_rounds_bids = np.copy(bids[:, round])
+            this_rounds_bids[j] = z
+            actual_winner = np.argmax(np.multiply(
+                qualities[:, round], bids[:, round]))
+            z_winner = np.argmax(np.multiply(
+                qualities[:, round], this_rounds_bids))
+
+            delta_x[i] += (1 if actual_winner == j else 0) - \
+                (1 if z_winner == j else 0)
+            delta_p[i] += (bids[j, round] if actual_winner ==
+                           j else 0) - (z if z_winner == j else 0)
+
+        delta_x[i] /= n
+        delta_p[i] /= n
+
+    return delta_x, delta_p
 
 
-def infer_value(bids, qualities, j, epsilon=0.1):
-    value = 0.01
+def infer_value(bids, qualities, j):
+    """
+    It takes in the bids and qualities of all the other bidders, and the index of the bidder whose value
+    we want to infer. It then calculates the delta_x and delta_p values for that bidder, and then
+    iterates through all possible values and epsilons to see which value is rationalizable for the
+    lowest possible epsilon
 
-    while value < 5:
-        rationalizable = True
-        for z in [z*value/10 for z in range(10)]:
-            regret = regret_for_z(bids, qualities, j, value, z)
+    Args:
+      bids: a list of the bids of all the bidders
+      qualities: a list of the qualities of all the bids for all the bidders
+      j: the bidder we're trying to infer the value for
 
-            if regret < -1 * epsilon:
-                rationalizable = False
+    Returns:
+      The highest rationalizable value for the lowest possible epsilon.
+    """
+    delta_x, delta_p = delta_x_and_delta_p(bids, qualities, j)
+    values = [i/100 for i in range(500)]
+    epsilons = [i/100 for i in range(500)]
+    rationalizable = [[False for _ in range(500)] for _ in range(500)]
+    for ii, e in enumerate(epsilons):
+        for jj, v in enumerate(values):
+            not_rationalizable_z = [True for r in np.subtract(np.multiply(
+                v, delta_x), delta_p) if r < -1 * e]
+            rationalizable[ii][jj] = len(not_rationalizable_z) == 0
+            # pick the highest rationalizable value for the lowest possible epsilon
+            if (~rationalizable[ii][jj] & rationalizable[ii][jj-1]):
+                return values[jj-1]
 
-        if not rationalizable:
-            return value - 0.01
-
-        value += 0.01
-
-    return value
+    return 5
 
 
 def part_1():
@@ -164,9 +193,9 @@ def revenue(bidder_values, items, rp):
     values_over_rp = [v for v in bidder_values if v > rp]
     bidders_over_rp = len(values_over_rp)
     if items < bidders_over_rp:
-        return bidder_values[len(bidder_values)-1-items] * items
+        return np.sum(values_over_rp[0:items])
     else:
-        return rp * bidders_over_rp 
+        return np.sum(values_over_rp)
 
 def multi_unit_auction(values, rounds, rp, k):
     bidders = len(values)
@@ -225,7 +254,7 @@ def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, ro
         v[:, round] = revenues    
     return v
 
-def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000):
+def expected_reserve_price_from_EW(bidders, items=1, rounds=1000):
     """
     It takes a list of bidders, an inverse distribution, and the number of items, and returns the
     expected reserve price
@@ -239,69 +268,50 @@ def expected_reserve_price_from_EW(bidders, distributions, items=1, rounds=1000)
     Returns:
         the expected reserve price from exponential weights
     """
-    reserve_prices = np.divide(list(range(0, 5)), 5/distributions["F inverse"](1))
+    reserve_prices = np.divide(list(range(0, 5)), 5/F_1_inverse(1))
     optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)
-    v = make_reserve_price_payoffs(bidders, distributions["F inverse"], reserve_prices, rounds, items)
-    _, probabilities = exponential_weights(v, optimal_epsilon, distributions["F inverse"](1))
+    v = make_reserve_price_payoffs(bidders, F_1_inverse, reserve_prices, rounds, items)
+    probabilities = exponential_weights(v, optimal_epsilon, F_1_inverse(1))
     
     expected_reserve_price = np.sum([prob*rp for prob, rp in zip(probabilities[:, rounds-1], reserve_prices)])
     return expected_reserve_price
 
-def F_1(v):
-    return v
-
 def F_1_inverse(v):
-    return v
-
-def F_1_density(v):
-    return 1
-
-def F_1_E(low, high, bidders, i):
-    uniform_sample = ((high-low)/(bidders+1))*(bidders-i+1)+low
-    return F_1_inverse(uniform_sample)
-
-def vv_1(v):
-    return 2*v - 1
-
-distributions_1 = {
-    "F": F_1,
-    "F inverse": F_1_inverse,
-    "f": F_1_density,
-    "Optimal RP": 1/2,
-    "E": F_1_E,
-    "virtual value": vv_1
-}
-
+    return 2.5 * v
 
 def part_2():
-    N = 5
+    N = 25
     rounds_arr = [(i+1)*10 for i in range(10)]
-    items_arr = [] # not sure how to change number of items
+    ITEMS = 2
     step_4_revenue = [0 for i in range(10)]
-    optimal_endowed_revenue = revenue([1, 1.5, 2, 2.5], 1, 0)
+    optimal_endowed_revenue = revenue([1, 1.5, 2, 2.5], ITEMS, 0)
     step_5_revenue = [0 for i in range(10)]
 
     for rounds_i, rounds in enumerate(rounds_arr):
         for _ in range(N):
-          values = [1, 1.5, 2, 2.5] # step 1
-          inferred_vals = [0, 0, 0, 0]
-          bids, qualities = multi_unit_auction(values, rounds, 0, 1) #step 2, for now using k = 1, can change later
-          error = 0
-          for i, v in enumerate(values):
-              infered_value = round(infer_value(bids, qualities, i), 3) #step 3
-              inferred_vals[i] = infered_value
-          step_4_revenue[rounds_i] = revenue(inferred_vals, 1, 0.5) #step 4, optimal reserve price for F(v) = v auction = 0.5
+            values = [1, 1.5, 2, 2.5] # step 1
+            inferred_vals = [0, 0, 0, 0]
+            bids, qualities = multi_unit_auction(values, rounds, 0, ITEMS) #step 2, for now using k = 1, can change later
+            error = 0
+            for i, v in enumerate(values):
+                infered_value = round(infer_value(bids, qualities, i), 3) #step 3
+                inferred_vals[i] = infered_value
+            # print(rounds, inferred_vals)
+            step_4_revenue[rounds_i] += revenue(inferred_vals, ITEMS, 0.5) #step 4, optimal reserve price for F(v) = v auction = 0.5
+        step_4_revenue[rounds_i] /= N
+          
     # step 5: with tuned reserve price
     for rounds_i, rounds in enumerate(rounds_arr):
         for _ in range(N):
-          values = [1, 1.5, 2, 2.5] 
-          inferred_vals = [0, 0, 0, 0]
-          for items in items_arr:
-            bids, qualities = multi_unit_auction(values, rounds, expected_reserve_price_from_EW(values, distributions_1, items, 1000), 1)
-          for i, v in enumerate(values):
-              infered_value = round(infer_value(bids, qualities, i), 3) #step 3
-              inferred_vals[i] = infered_value
-          step_5_revenue[rounds_i] = revenue(inferred_vals, 1, 0.5)
+            values = [1, 1.5, 2, 2.5] 
+            inferred_vals = [0, 0, 0, 0]
+            bids, qualities = multi_unit_auction(values, rounds, expected_reserve_price_from_EW(len(values), ITEMS, 1000), ITEMS)
+            for i, v in enumerate(values):
+                infered_value = round(infer_value(bids, qualities, i), 3) #step 3
+                inferred_vals[i] = infered_value
+            # print(rounds, inferred_vals)
+            step_5_revenue[rounds_i] += revenue(inferred_vals, ITEMS, 0.5)
+        step_5_revenue[rounds_i] /= N
 
     plt.plot(rounds_arr, step_4_revenue, label='optimized parameters max revenue with inferred vals', color="Red")
     plt.plot(rounds_arr, step_5_revenue, label='new mechanism max revenue', color="Blue" )
