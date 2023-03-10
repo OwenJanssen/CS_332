@@ -180,15 +180,17 @@ def part_1():
 
 def revenue(bidder_values, items, rp):
     """
-    Returns the revenue for a 2nd price (items+1 price) auction with reserve
-
+    If there are more bidders than items, then the revenue is the sum of the top bidders' values. 
+    
+    If there are more items than bidders, then the revenue is the sum of all bidders' values
+    
     Args:
-      bidder_values: values of bidders participating in the auction
-      items: number of items being sold
-      rp: reserve price of auction
-      
+      bidder_values: a list of the values of the bidders
+      items: number of items to be sold
+      rp: reserve price
+    
     Returns:
-      the revenue of the auction
+      The sum of the values of the bidders who bid over the reserve price.
     """
     values_over_rp = [v for v in bidder_values if v > rp]
     bidders_over_rp = len(values_over_rp)
@@ -198,6 +200,19 @@ def revenue(bidder_values, items, rp):
         return np.sum(values_over_rp)
 
 def multi_unit_auction(values, rounds, rp, k):
+    """
+    It runs the multi-unit auction for a given number of rounds, with a given number of bidders, and a
+    given number of items to be sold
+    
+    Args:
+      values: a list of the values of each bidder
+      rounds: number of rounds
+      rp: reserve price
+      k: number of items to be sold
+    
+    Returns:
+      The bids and qualities of the bidders.
+    """
     bidders = len(values)
     qualities = np.random.rand(bidders, rounds)
     bids = np.zeros((bidders, rounds))
@@ -233,17 +248,21 @@ def multi_unit_auction(values, rounds, rp, k):
 
 def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, rounds, items):
     """
-    We simulation rounds of auctions and record the revenue derived based on reserve_prices
+    For each round, we generate a list of bidder values, sort them, and then compute the revenue for
+    each reserve price
     
     Args:
-      bidders: the number of bidders
-      inverse_distribution: a function that takes a random number between 0 and 1 and returns a value
-    from the distribution
-      items: number of items to be sold
+      bidders: the number of bidders in the auction
+      inverse_distribution: a function that takes a uniform random variable and returns a value from the
+    distribution we want to sample from.
+      reserve_prices: a list of reserve prices to test
+      rounds: the number of rounds of the auction
+      items: the number of items to be sold
     
     Returns:
-      a payoff matrix with actions for each reserve price and round
+      A matrix of revenues for each reserve price and each round.
     """
+
     v = np.zeros((len(reserve_prices), rounds))
     
     for round in range(rounds):
@@ -256,18 +275,18 @@ def make_reserve_price_payoffs(bidders, inverse_distribution, reserve_prices, ro
 
 def expected_reserve_price_from_EW(bidders, items=1, rounds=1000):
     """
-    It takes a list of bidders, an inverse distribution, and the number of items, and returns the
-    expected reserve price
+    It takes a list of bidders, and returns the expected reserve price that maximizes the expected
+    revenue
     
     Args:
-        bidders: the number of bidders
-        distributions: the distribution functions of the bidders' values
-        items: number of items to be sold
-        rounds: number of rounds to use for exponential weights
+      bidders: number of bidders
+      items: number of items in the auction. Defaults to 1
+      rounds: number of rounds of the auction. Defaults to 1000
     
     Returns:
-        the expected reserve price from exponential weights
+      The expected reserve price.
     """
+
     reserve_prices = np.divide(list(range(0, 5)), 5/F_1_inverse(1))
     optimal_epsilon = np.sqrt(np.log(len(reserve_prices))/rounds)
     v = make_reserve_price_payoffs(bidders, F_1_inverse, reserve_prices, rounds, items)
